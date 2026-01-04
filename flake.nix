@@ -54,6 +54,63 @@
               maintainers = [ ];
             };
           };
+
+          nixe-service = if pkgs.stdenv.isLinux then pkgs.stdenv.mkDerivation {
+            pname = "nixe-service";
+            version = "0.1.0";
+
+            dontUnpack = true;
+
+            buildPhase = ''
+              mkdir -p $out/lib/systemd/system
+              mkdir -p $out/bin
+
+              # Copy the nixe binary
+              cp ${self.packages.${system}.default}/bin/nixe $out/bin/
+
+              # Create systemd service file
+              cat > $out/lib/systemd/system/nixe.service << EOF
+              [Unit]
+              Description=Nixe Service
+              After=network.target
+              Wants=network.target
+
+              [Service]
+              Type=simple
+              ExecStart=$out/bin/nixe
+              Restart=always
+              RestartSec=5
+              User=nobody
+              Group=nobody
+
+              # Security settings
+              NoNewPrivileges=yes
+              PrivateTmp=yes
+              ProtectSystem=strict
+              ProtectHome=yes
+              ReadWritePaths=/var/lib/nixe
+
+              # Environment
+              Environment=RUST_LOG=info
+
+              [Install]
+              WantedBy=multi-user.target
+              EOF
+            '';
+
+            installPhase = ''
+              # Files are already in place from buildPhase
+            '';
+
+            meta = with pkgs.lib; {
+              description = "Nixe systemd service";
+              platforms = platforms.linux;
+              maintainers = [ ];
+            };
+          } else pkgs.runCommand "nixe-service-unsupported" {} ''
+            mkdir -p $out
+            echo "nixe-service is only available on Linux systems" > $out/README
+          '';
         };
 
         devShells.default = pkgs.mkShell {
