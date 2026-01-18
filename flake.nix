@@ -31,15 +31,14 @@
           config = lib.mkIf cfg.enable {
             systemd.user.services.nixe = {
               description = "Nixe service";
-              wantedBy = [ "multi-user.target" ];
-              after = [ "network.target" ];
+              wantedBy = [ "default.target" ];
+              after = [ "network-online.target" ];
+              wants = [ "network-online.target" ];
               serviceConfig = {
                 Type = "simple";
                 ExecStart = "${cfg.package}/bin/nixe";
                 Restart = "always";
                 RestartSec = 5;
-                DynamicUser = true;
-                NoNewPrivileges = true;
                 ProtectSystem = "strict";
                 ProtectHome = true;
               };
