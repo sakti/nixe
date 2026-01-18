@@ -29,7 +29,7 @@
           };
 
           config = lib.mkIf cfg.enable {
-            systemd.services.nixe = {
+            systemd.user.services.nixe = {
               description = "Nixe service";
               wantedBy = [ "multi-user.target" ];
               after = [ "network.target" ];
