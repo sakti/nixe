@@ -30,21 +30,25 @@
 
           config = lib.mkIf cfg.enable {
             systemd.user.services.nixe = {
-              description = "Nixe service";
-              wantedBy = [ "default.target" ];
-              after = [ "network-online.target" ];
-              wants = [ "network-online.target" ];
-              serviceConfig = {
-                Type = "simple";
-                ExecStart = "${cfg.package}/bin/nixe";
-                Restart = "always";
-                RestartSec = 5;
-                ProtectSystem = "strict";
-                ProtectHome = true;
-              };
-              environment = {
-                PORT = toString cfg.port;
-              };
+              Unit = {
+                  Description = "Nixe service";
+                  After = [ "network-online.target" ];
+                  Wants = [ "network-online.target" ];
+                };
+
+                Service = {
+                  Type = "simple";
+                  ExecStart = "${cfg.package}/bin/nixe";
+                  Restart = "always";
+                  RestartSec = 5;
+                  ProtectSystem = "strict";
+                  ProtectHome = true;
+                  Environment = "PORT=${toString cfg.port}";
+                };
+
+                Install = {
+                  WantedBy = [ "default.target" ];
+                };
             };
           };
         };
