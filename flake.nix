@@ -9,31 +9,46 @@
 
   outputs = { self, nixpkgs, rust-overlay, flake-utils }:
     let
-      nixosModule = {config, lib, pkgs,...}: {
-        options.service.nixe = {
-          enable = lib.mkEnableOption "Nixe";
-          port = lib.mkOption {
-            type = lib.types.port;
-            default = 3000;
-            description = "The port to listen on.";
-          };
-        };
-        config = lib.mkIf config.service.nixe.enable {
-          systemd.services.nixe = {
-            description = "Nixe";
-            wantedBy = [ "multi-user.target" ];
-            serviceConfig = {
-              Type = "simple";
-              ExecStart = "${self.packages.${pkgs.system}.default}/bin/nixe";
-              Restart = "always";
-              RestartSec = 5;
+      nixosModule = {config, lib, pkgs,...}:
+        let
+          cfg = config.services.nixe;
+          nixePkg = self.packages.${pkgs.stdenv.hostPlatform.system}.default or pkgs.nixe;
+        in {
+          options.services.nixe = {
+            enable = lib.mkEnableOption "Nixe service";
+            port = lib.mkOption {
+              type = lib.types.port;
+              default = 3000;
+              description = "The port to listen on.";
             };
-            environment = {
-              PORT = toString config.service.nixe.port;
+            package = lib.mkOption {
+              type = lib.types.package;
+              default = nixePkg;
+              description = "The nixe package to use.";
             };
           };
+
+          config = lib.mkIf cfg.enable {
+            systemd.services.nixe = {
+              description = "Nixe service";
+              wantedBy = [ "multi-user.target" ];
+              after = [ "network.target" ];
+              serviceConfig = {
+                Type = "simple";
+                ExecStart = "${cfg.package}/bin/nixe";
+                Restart = "always";
+                RestartSec = 5;
+                DynamicUser = true;
+                NoNewPrivileges = true;
+                ProtectSystem = "strict";
+                ProtectHome = true;
+              };
+              environment = {
+                PORT = toString cfg.port;
+              };
+            };
+          };
         };
-      };
     in
     flake-utils.lib.eachDefaultSystem (system:
       let
